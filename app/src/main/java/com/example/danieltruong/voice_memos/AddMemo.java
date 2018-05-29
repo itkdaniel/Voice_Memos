@@ -89,5 +89,18 @@ public class AddMemo extends AppCompatActivity {
                 }
             });
         }
+
+        @JavascriptInterface
+        public void exit(){
+            Log.i(LOG_TAG, "I am in the js (exit) call");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    // TODO: METHOD CODE HERE
+                    Toast.makeText(AddMemo.this, "Exiting activity", Toast.LENGTH_LONG).show();
+                    finish();
+                }
+            });
+        }
     }
 }
