@@ -89,8 +89,12 @@ public class AddMemo extends AppCompatActivity {
 
                         try{
                             j = (String) objectStream.readObject();
-//                            Log.d("ser_file_number: ", j);
+
+                            // read in the String to an int
+                            // add one to that int
                             int num_memos = Integer.valueOf(j) + 1;
+
+                            // convert back to a String (this is filename for your audio file)
                             j = String.valueOf(num_memos);
                             Log.d("ser_file_number: ", j);
 
@@ -121,18 +125,9 @@ public class AddMemo extends AppCompatActivity {
                         }catch(IOException io){
                             io.printStackTrace();
                         }
-
                     }
-
-
-                    // read in the String to an int
-
-                    //add one to that int
-
-                    // convert back to a String (this is filename for your audio file)
                     // audio file's extension is .3gp
-
-
+                    // Start recording and save recording as "Audio Recording 'j'"
                 }
             });
         }
@@ -182,7 +177,9 @@ public class AddMemo extends AppCompatActivity {
                     // TODO: METHOD CODE HERE
                     Toast.makeText(AddMemo.this, "Exiting activity", Toast.LENGTH_LONG).show();
                     // Must use startActivity() instead of finish() for listView to update in MainActivity onResume()
-                    startActivity(new Intent(AddMemo.this, MainActivity.class));
+                    Intent i = new Intent(AddMemo.this, MainActivity.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(i);
                 }
             });
         }
