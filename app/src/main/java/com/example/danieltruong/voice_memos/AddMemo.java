@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -62,6 +63,12 @@ public class AddMemo extends AppCompatActivity {
         myWebView.addJavascriptInterface(new JavaScriptInterface(this), "Android");
         myWebView.loadUrl(MY_WEBPAGE);
 
+        // Check/Request Permissions
+        if(checkPermission()){
+            MediaRecorderReady();
+        }else{
+            requestPermission();
+        }
     }
 
     public class JavaScriptInterface{
@@ -71,6 +78,7 @@ public class AddMemo extends AppCompatActivity {
             mContext = c;
         }
 
+        // Start and Save recording
         @JavascriptInterface
         public void record(){
             Log.i(LOG_TAG, "I am in the js (record) call");
@@ -98,6 +106,7 @@ public class AddMemo extends AppCompatActivity {
                             j = String.valueOf(num_memos);
                             Log.d("ser_file_number: ", j);
 
+
                             try{
                                 FileOutputStream outputStream = new FileOutputStream(f);
                                 ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
@@ -105,7 +114,21 @@ public class AddMemo extends AppCompatActivity {
                                 objectOutput.close();
                                 outputStream.close();
                             }catch(IOException exception){
+                                exception.printStackTrace();
+                            }
 
+                            if(checkPermission()){
+                                AudioSavePathInDevice = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + j + ".3gp";
+                                MediaRecorderReady();
+
+                                try{
+                                    mediaRecorder.prepare();
+                                    mediaRecorder.start();
+                                }catch(IllegalStateException e){
+                                    e.printStackTrace();
+                                }catch(IOException e){
+                                    e.printStackTrace();
+                                }
                             }
                         }catch(ClassNotFoundException c){
                             c.printStackTrace();
@@ -114,24 +137,46 @@ public class AddMemo extends AppCompatActivity {
                         e.printStackTrace();
                         Toast.makeText(AddMemo.this, "No Memos, creating first...", Toast.LENGTH_LONG).show();
                         Log.d("add_status: ", "no memos, creating first");
+                        String j = null;
                         try{
                             File f = new File(getFilesDir(), "file.ser");
                             FileOutputStream outputStream = new FileOutputStream(f);
                             ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
-                            String j = "1";
+                            j = "1";
                             objectOutput.writeObject(j);
                             objectOutput.close();
                             outputStream.close();
                         }catch(IOException io){
                             io.printStackTrace();
                         }
+
+                        // audio file's extension is .3gp
+                        // Start recording and save recording as 'j.3gp'"
+                        if(checkPermission()){
+                            AudioSavePathInDevice = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + j + ".3gp";
+                            MediaRecorderReady();
+
+                            try{
+                                mediaRecorder.prepare();
+                                mediaRecorder.start();
+
+                            }catch(IllegalStateException ise){
+                                ise.printStackTrace();
+                            }catch(IOException ie){
+                                ie.printStackTrace();
+                            }
+
+                        }else{
+                            requestPermission();
+
+                        }
                     }
-                    // audio file's extension is .3gp
-                    // Start recording and save recording as "Audio Recording 'j'"
+
                 }
             });
         }
 
+        // Stop recording
         @JavascriptInterface
         public void stop(){
             Log.i(LOG_TAG, "I am in the js (stop) call");
@@ -140,10 +185,20 @@ public class AddMemo extends AppCompatActivity {
                 public void run() {
                     // TODO: METHOD CODE HERE
                     Toast.makeText(AddMemo.this, "Stopping", Toast.LENGTH_LONG).show();
+                    Log.d("media_recorder_status", "failed!");
+                    if (mediaRecorder != null){
+                        mediaRecorder.stop();
+                        mediaRecorder.reset();
+                        mediaRecorder.release();
+                        Log.d("Media_recorder", "Stopping");
+                    }
+                    Log.d("media_recorder_status", "success!");
+
                 }
             });
         }
 
+        // Play most recent recording
         @JavascriptInterface
         public void play(){
             Log.i(LOG_TAG, "I am in the js (play) call");
@@ -152,10 +207,34 @@ public class AddMemo extends AppCompatActivity {
                 public void run() {
                     // TODO: METHOD CODE HERE
                     Toast.makeText(AddMemo.this, "Playing", Toast.LENGTH_LONG).show();
+                    mediaPlayer = new MediaPlayer();
+                    try{
+                        File f = new File(getFilesDir(), "file.ser");
+                        FileInputStream inputStream = new FileInputStream(f);
+                        ObjectInputStream objectStream = new ObjectInputStream(inputStream);
+                        String j = null;
+
+                        try{
+                            j = (String) objectStream.readObject();
+                            AudioSavePathInDevice = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + j + ".3gp";
+                        }catch(ClassNotFoundException ce){
+                            ce.printStackTrace();
+                        }
+                        try{
+                            mediaPlayer.setDataSource(AudioSavePathInDevice);
+                            mediaPlayer.prepare();
+                        }catch(IOException ioe){
+                            ioe.printStackTrace();
+                        }
+                        mediaPlayer.start();
+                    }catch(IOException e){
+                        e.printStackTrace();
+                    }
                 }
             });
         }
 
+        // Stop playing recording
         @JavascriptInterface
         public void stoprec(){
             Log.i(LOG_TAG, "I am in the js (stoprec) call");
@@ -164,6 +243,12 @@ public class AddMemo extends AppCompatActivity {
                 public void run() {
                     // TODO: METHOD CODE HERE
                     Toast.makeText(AddMemo.this, "Stopping recording", Toast.LENGTH_LONG).show();
+
+                    if(mediaPlayer != null){
+                        mediaPlayer.stop();
+                        mediaPlayer.release();
+                        MediaRecorderReady();
+                    }
                 }
             });
         }
@@ -184,46 +269,88 @@ public class AddMemo extends AppCompatActivity {
             });
         }
 
-        public void MediaRecorderRead(){
-            mediaRecorder = new MediaRecorder();
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mediaRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
-            mediaRecorder.setOutputFile(AudioSavePathInDevice);
-        }
+//        public void MediaRecorderReady(){
+//            mediaRecorder = new MediaRecorder();
+//            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+//            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+//            mediaRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
+//            mediaRecorder.setOutputFile(AudioSavePathInDevice);
+//        }
+//
+//        // TODO: REQUEST PERMISSIONS FROM USER
+//        private void requestPermission(){
+//            ActivityCompat.requestPermissions(AddMemo.this, new
+//                    String[]{WRITE_EXTERNAL_STORAGE, RECORD_AUDIO}, RequestPermissionCode);
+//        }
+//
+//        // TODO: CALLBACK METHOD
+//        public void onRequestPermissionResult(int requestCode, String permissions[], int[] grantResults){
+//            switch(requestCode){
+//                case RequestPermissionCode:
+//                    if (grantResults.length> 0) {
+//                        boolean StoragePermission = grantResults[0] ==
+//                                PackageManager.PERMISSION_GRANTED;
+//                        boolean RecordPermission = grantResults[1] ==
+//                                PackageManager.PERMISSION_GRANTED;
+//
+//                        if (StoragePermission && RecordPermission) {
+//                            Toast.makeText(AddMemo.this, "Permission Granted",
+//                                    Toast.LENGTH_LONG).show();
+//                        } else {
+//                            Toast.makeText(AddMemo.this,"Permission Denied",Toast.LENGTH_LONG).show();
+//                        }
+//                    }
+//                    break;
+//            }
+//        }
+//
+//        public boolean checkPermission(){
+//            int result = ContextCompat.checkSelfPermission(getApplicationContext(), WRITE_EXTERNAL_STORAGE);
+//            int result1 = ContextCompat.checkSelfPermission(getApplicationContext(), RECORD_AUDIO);
+//
+//            return result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED;
+//        }
+    }
 
-        // TODO: REQUEST PERMISSIONS FROM USER
-        private void requestPermission(){
-            ActivityCompat.requestPermissions(AddMemo.this, new
-                    String[]{WRITE_EXTERNAL_STORAGE, RECORD_AUDIO}, RequestPermissionCode);
-        }
+    public void MediaRecorderReady(){
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mediaRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
+        mediaRecorder.setOutputFile(AudioSavePathInDevice);
+    }
 
-        // TODO: CALLBACK METHOD
-        public void onRequestPermissionResult(int requestCode, String permissions[], int[] grantResults){
-            switch(requestCode){
-                case RequestPermissionCode:
-                    if (grantResults.length> 0) {
-                        boolean StoragePermission = grantResults[0] ==
-                                PackageManager.PERMISSION_GRANTED;
-                        boolean RecordPermission = grantResults[1] ==
-                                PackageManager.PERMISSION_GRANTED;
+    // TODO: REQUEST PERMISSIONS FROM USER
+    private void requestPermission(){
+        ActivityCompat.requestPermissions(AddMemo.this, new
+                String[]{WRITE_EXTERNAL_STORAGE, RECORD_AUDIO}, RequestPermissionCode);
+    }
 
-                        if (StoragePermission && RecordPermission) {
-                            Toast.makeText(AddMemo.this, "Permission Granted",
-                                    Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(AddMemo.this,"Permission Denied",Toast.LENGTH_LONG).show();
-                        }
+    // TODO: CALLBACK METHOD
+    public void onRequestPermissionResult(int requestCode, String permissions[], int[] grantResults){
+        switch(requestCode){
+            case RequestPermissionCode:
+                if (grantResults.length> 0) {
+                    boolean StoragePermission = grantResults[0] ==
+                            PackageManager.PERMISSION_GRANTED;
+                    boolean RecordPermission = grantResults[1] ==
+                            PackageManager.PERMISSION_GRANTED;
+
+                    if (StoragePermission && RecordPermission) {
+                        Toast.makeText(AddMemo.this, "Permission Granted",
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(AddMemo.this,"Permission Denied",Toast.LENGTH_LONG).show();
                     }
-                    break;
-            }
+                }
+                break;
         }
+    }
 
-        public boolean checkPermission(){
-            int result = ContextCompat.checkSelfPermission(getApplicationContext(), WRITE_EXTERNAL_STORAGE);
-            int result1 = ContextCompat.checkSelfPermission(getApplicationContext(), RECORD_AUDIO);
+    public boolean checkPermission(){
+        int result = ContextCompat.checkSelfPermission(getApplicationContext(), WRITE_EXTERNAL_STORAGE);
+        int result1 = ContextCompat.checkSelfPermission(getApplicationContext(), RECORD_AUDIO);
 
-            return result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED;
-        }
+        return result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED;
     }
 }

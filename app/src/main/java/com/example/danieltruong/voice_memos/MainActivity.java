@@ -2,6 +2,8 @@ package com.example.danieltruong.voice_memos;
 
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaPlayer;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,9 +11,11 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,9 +29,8 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    public JSONObject jsonObject = null;
-    public JSONArray jsonArray = null;
-    private static final String TAG = "JSON_LIST";
+    String AudioSavePathInDevice = null;
+    MediaPlayer mediaPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +77,22 @@ public class MainActivity extends AppCompatActivity {
             }
 
             final Context context = this;
+
+            list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    mediaPlayer = new MediaPlayer();
+                    AudioSavePathInDevice = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + String.valueOf(position + 1) + ".3gp";
+                    try{
+                        mediaPlayer.setDataSource(AudioSavePathInDevice);
+                        mediaPlayer.prepare();
+                    }catch(IOException e){
+                        e.printStackTrace();
+                    }
+                    mediaPlayer.start();
+                    Toast.makeText(MainActivity.this, "Playing Audio Recording " + String.valueOf(position + 1), Toast.LENGTH_LONG).show();
+                }
+            });
 
         }catch(IOException e){
             list.setEnabled(false);
