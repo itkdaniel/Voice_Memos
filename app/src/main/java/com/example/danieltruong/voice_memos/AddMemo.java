@@ -1,9 +1,13 @@
 package com.example.danieltruong.voice_memos;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Environment;
@@ -44,9 +48,10 @@ public class AddMemo extends AppCompatActivity {
     String AudioSavePathInDevice = null;
     MediaRecorder mediaRecorder;
     MediaPlayer mediaPlayer;
-    JSONObject jsonObject = null;
-    JSONArray jsonArray = null;
-
+    private LocationManager locationManager;
+    private LocationListener locationListener;
+    private Location location;
+    Context mContext;
     WebView myWebView;
 
     @Override
@@ -68,6 +73,16 @@ public class AddMemo extends AppCompatActivity {
             MediaRecorderReady();
         }else{
             requestPermission();
+        }
+
+        mContext = this;
+
+        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(AddMemo.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        } else {
+            Toast.makeText(mContext, "You have granted permission", Toast.LENGTH_SHORT).show();
+            locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+            location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
     }
 
