@@ -106,16 +106,16 @@ public class AddMemo extends AppCompatActivity {
                             j = String.valueOf(num_memos);
                             Log.d("ser_file_number: ", j);
 
-
-                            try{
-                                FileOutputStream outputStream = new FileOutputStream(f);
-                                ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
-                                objectOutput.writeObject(j);
-                                objectOutput.close();
-                                outputStream.close();
-                            }catch(IOException exception){
-                                exception.printStackTrace();
-                            }
+                            // Write/Update number of memos
+//                            try{
+//                                FileOutputStream outputStream = new FileOutputStream(f);
+//                                ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
+//                                objectOutput.writeObject(j);
+//                                objectOutput.close();
+//                                outputStream.close();
+//                            }catch(IOException exception){
+//                                exception.printStackTrace();
+//                            }
 
                             if(checkPermission()){
                                 AudioSavePathInDevice = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + j + ".3gp";
@@ -139,14 +139,14 @@ public class AddMemo extends AppCompatActivity {
                         Log.d("add_status: ", "no memos, creating first");
                         String j = null;
                         try{
-                            File f = new File(getFilesDir(), "file.ser");
-                            FileOutputStream outputStream = new FileOutputStream(f);
-                            ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
+//                            File f = new File(getFilesDir(), "file.ser");
+//                            FileOutputStream outputStream = new FileOutputStream(f);
+//                            ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
                             j = "1";
-                            objectOutput.writeObject(j);
-                            objectOutput.close();
-                            outputStream.close();
-                        }catch(IOException io){
+//                            objectOutput.writeObject(j);
+//                            objectOutput.close();
+//                            outputStream.close();
+                        }catch(Exception io){
                             io.printStackTrace();
                         }
 
@@ -185,6 +185,57 @@ public class AddMemo extends AppCompatActivity {
                 public void run() {
                     // TODO: METHOD CODE HERE
                     Toast.makeText(AddMemo.this, "Stopping", Toast.LENGTH_LONG).show();
+
+                    try{
+                        File f = new File(getFilesDir(), "file.ser");
+                        FileInputStream inputStream = new FileInputStream(f);
+                        ObjectInputStream objectStream = new ObjectInputStream(inputStream);
+                        String j = null;
+
+                        try{
+                            j = (String) objectStream.readObject();
+
+                            // read in the String to an int
+                            // add one to that int
+                            int num_memos = Integer.valueOf(j) + 1;
+
+                            // convert back to a String (this is filename for your audio file)
+                            j = String.valueOf(num_memos);
+                            Log.d("ser_file_number: ", j);
+
+                            // Write/Update number of memos
+                            try{
+                                FileOutputStream outputStream = new FileOutputStream(f);
+                                ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
+                                objectOutput.writeObject(j);
+                                objectOutput.close();
+                                outputStream.close();
+                            }catch(IOException exception){
+                                exception.printStackTrace();
+                            }
+
+                        }catch(ClassNotFoundException e){
+                            e.printStackTrace();
+                        }
+                    }catch(IOException e){
+                        e.printStackTrace();
+                        Toast.makeText(AddMemo.this, "No Memos, creating first...", Toast.LENGTH_LONG).show();
+                        Log.d("add_status: ", "no memos, creating first");
+                        String j = null;
+                        try{
+                            File f = new File(getFilesDir(), "file.ser");
+                            FileOutputStream outputStream = new FileOutputStream(f);
+                            ObjectOutput objectOutput = new ObjectOutputStream(outputStream);
+                            j = "1";
+                            objectOutput.writeObject(j);
+                            objectOutput.close();
+                            outputStream.close();
+                        }catch(IOException io){
+                            io.printStackTrace();
+                        }
+                    }
+
+
                     Log.d("media_recorder_status", "failed!");
                     if (mediaRecorder != null){
                         mediaRecorder.stop();
